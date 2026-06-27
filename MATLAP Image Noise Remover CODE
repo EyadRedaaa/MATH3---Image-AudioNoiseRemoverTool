@@ -1,0 +1,56 @@
+% Audio Noise Remover Tool
+%=============================================================Start Of Program
+
+clc;     % Clear the command window
+close all;  % Close all figure windows
+clear;   % Clear all variables from the workspace
+
+%============================================================= Read the image and convert it to grayscale
+
+img = imread('Test.png');  % Load the image file
+img = rgb2gray(img);      % Convert the RGB image to grayscale
+figure, imshow(img)       % Display the grayscale image
+
+%=============================================================Fourier Transform
+
+ft2 = fft2(img);          % Compute the 2D Fourier Transform of the image
+Fmag = log(1 + abs(ft2)); % Compute the magnitude spectrum and apply logarithmic scaling
+figure('Name','Magnitude Fourier'); imshow(Fmag, []); % Display the magnitude spectrum
+ft = fftshift(ft2);      % Shift the zero frequency components to the center of the spectrum
+figure('Name','Fourier frequency shift'); imshow(fftshift(Fmag), []); % Display the shifted spectrum
+
+%=============================================================Create frequency filters
+
+[row, col] = size(ft);   % Get the size of the Fourier transformed image
+radius = 20;             % Define the radius for the low-pass filter
+rm = row / 2;            % Calculate the center row
+clm = col / 2;           % Calculate the center column
+[x, y] = meshgrid(-rm:rm-1, -clm:clm-1);  % Create a grid of x and y coordinates
+z = sqrt(x.^2 + y.^2);  % Calculate the distance from the center
+cL = z < radius;        % Create the low-pass filter mask (1 inside the circle, 0 outside)
+cH = ~cL;               % Create the high-pass filter mask (inverse of low-pass)
+
+%=============================================================Apply the filters
+
+l_ft = ft .* cL;        % Apply the low-pass filter to the Fourier transformed image
+h_ft = ft .* cH;        % Apply the high-pass filter to the Fourier transformed image
+
+%=============================================================Inverse Fourier Transform
+
+low_filtered_image = ifft2(ifftshift(l_ft)); % Compute the inverse 2D Fourier Transform for low frequencies
+high_filtered_image = ifft2(ifftshift(h_ft)); % Compute the inverse 2D Fourier Transform for high frequencies
+low_f = uint8(low_filtered_image); % Convert the low-pass filtered image to uint8 format
+high_f = uint8(high_filtered_image); % Convert the high-pass filtered image to uint8 format
+
+%=============================================================Display results
+
+figure, imshow(low_f) % Display the low-frequency filtered image
+subplot(2, 2, 1); imshow(cL, []); title('Low-frequency filter'); axis on; % Show low-frequency filter
+subplot(2, 2, 2); imshow(cH, []); title('High-frequency filter'); axis on; % Show high-frequency filter
+subplot(2, 2, 3); imshow(low_f, []); title('Low-frequency-image'); axis on; % Show low-frequency image
+subplot(2, 2, 4); imshow(high_f, []); title('High-frequency-image'); axis on; % Show high-frequency image
+
+%=============================================================If you want to save the resulting images, you can use the imwrite function after displaying the images. For example:
+
+% imwrite(low_f, 'low_frequency_image.png'); % Save the low-frequency image
+% imwrite(high_f, 'high_frequency_image.png'); % Save the high-frequency image
